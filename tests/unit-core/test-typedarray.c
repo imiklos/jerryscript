@@ -303,6 +303,44 @@ test_typedarray_complex_creation (test_entry_t test_entries[], /**< test cases *
   }
 } /* test_typedarray_complex_creation */
 
+/**
+ * Test get/set/delete property by index.
+ */
+static void test_property_by_index (test_entry_t test_entries[])
+{
+
+  jerry_value_t ja = jerry_create_number (3);
+  jerry_value_t jb = jerry_create_number (6);
+  jerry_value_t jc = jerry_create_number (50);
+  jerry_value_t global_obj_val = jerry_get_global_object ();
+
+  for (uint32_t i = 0; test_entries[i].constructor_name != NULL; i++)
+  {
+    jerry_value_t prop_name = jerry_create_string ((const jerry_char_t *) test_entries[i].constructor_name);
+    jerry_value_t prop_value = jerry_get_property (global_obj_val, prop_name);
+    jerry_value_t length_arg = jerry_create_number (test_entries[i].element_count);
+
+    jerry_value_t typedarray = jerry_construct_object (prop_value, &length_arg, 1);
+
+    jerry_release_value (prop_name);
+    jerry_release_value (prop_value);
+    jerry_release_value (length_arg);
+
+    jerry_set_property_by_index (typedarray, 0, ja);
+    jerry_set_property_by_index (typedarray, 1, jb);
+    jerry_set_property_by_index (typedarray, 2, jc);
+
+    TEST_ASSERT (jerry_get_number_value (ja) == jerry_get_number_value (jerry_get_property_by_index (typedarray, 0)));
+    TEST_ASSERT (jerry_get_number_value (jc) == jerry_get_number_value (jerry_get_property_by_index (typedarray, 2)));
+    TEST_ASSERT (!jerry_delete_property_by_index (typedarray, 1));
+    TEST_ASSERT (jerry_get_number_value (jb) == jerry_get_number_value (jerry_get_property_by_index (typedarray, 1)));
+    TEST_ASSERT (jerry_value_is_undefined (jerry_get_property_by_index (typedarray, test_entries[i].element_count)));
+
+    jerry_release_value (typedarray);
+  }
+  jerry_release_value (global_obj_val);
+} /* test_property_by_index */
+
 int
 main (void)
 {
@@ -413,6 +451,8 @@ main (void)
 
   test_typedarray_complex_creation (test_entries, false);
   test_typedarray_complex_creation (test_entries, true);
+
+  test_property_by_index (test_entries);
 
   /* test invalid things */
   {
