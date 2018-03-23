@@ -308,37 +308,96 @@ test_typedarray_complex_creation (test_entry_t test_entries[], /**< test cases *
  */
 static void test_property_by_index (test_entry_t test_entries[])
 {
-
-  jerry_value_t ja = jerry_create_number (3);
-  jerry_value_t jb = jerry_create_number (6);
-  jerry_value_t jc = jerry_create_number (50);
-  jerry_value_t global_obj_val = jerry_get_global_object ();
-
   for (uint32_t i = 0; test_entries[i].constructor_name != NULL; i++)
   {
-    jerry_value_t prop_name = jerry_create_string ((const jerry_char_t *) test_entries[i].constructor_name);
-    jerry_value_t prop_value = jerry_get_property (global_obj_val, prop_name);
-    jerry_value_t length_arg = jerry_create_number (test_entries[i].element_count);
+    jerry_value_t test_numbers[5];
+    uint32_t test_numbers_length = sizeof (test_numbers) / sizeof (jerry_value_t);
+    jerry_value_t typedarray = jerry_create_typedarray (test_entries[i].typedarray_type, test_numbers_length);
+    jerry_typedarray_type_t type = jerry_get_typedarray_type (typedarray);
 
-    jerry_value_t typedarray = jerry_construct_object (prop_value, &length_arg, 1);
+    double d_random_value;
+    int i_random_value;
+    /* Fill the test numbers array */
+    switch (test_entries[i].typedarray_type)
+    {
+      case JERRY_TYPEDARRAY_INT8:
+      case JERRY_TYPEDARRAY_INT16:
+      case JERRY_TYPEDARRAY_INT32:
+      i_random_value = rand () % 255 -128;
+      for (uint8_t j = 0; j < test_numbers_length; j++)
+      {
+        test_numbers[j] = jerry_create_number (i_random_value);
+      }
+      break;
+      case JERRY_TYPEDARRAY_FLOAT32:
+      case JERRY_TYPEDARRAY_FLOAT64:
+      d_random_value = (double) rand () / RAND_MAX*2.0 - 1.0;
+      for (uint8_t j = 0; j < test_numbers_length; j++)
+      {
+        test_numbers[j] = jerry_create_number (d_random_value);
+      }
+      break;
+      default:
+      i_random_value = rand () % 255;
+      for (uint8_t j = 0; j < test_numbers_length; j++)
+      {
+        test_numbers[j] = jerry_create_number (i_random_value);
+      }
+      break;
+    }
 
-    jerry_release_value (prop_name);
-    jerry_release_value (prop_value);
-    jerry_release_value (length_arg);
+    for (uint8_t j = 0; j < test_numbers_length; j++)
+    {
+      TEST_ASSERT (!jerry_delete_property_by_index (typedarray, j));
+      jerry_value_t set_jj = jerry_set_property_by_index (typedarray, j, test_numbers[j]);
+      jerry_value_t get_jj = jerry_get_property_by_index (typedarray, j);
 
-    jerry_set_property_by_index (typedarray, 0, ja);
-    jerry_set_property_by_index (typedarray, 1, jb);
-    jerry_set_property_by_index (typedarray, 2, jc);
+      TEST_ASSERT (set_jj);
+      TEST_ASSERT (!jerry_delete_property_by_index (typedarray, j));
+      if (type == JERRY_TYPEDARRAY_FLOAT32 || type == JERRY_TYPEDARRAY_FLOAT64)
+      {
+        double epsilon = pow (10,-7);
+        double get_abs = fabs (jerry_get_number_value (get_jj) - jerry_get_number_value (test_numbers[j]));
+        TEST_ASSERT (get_abs < epsilon);
+      }
+      else
+      {
+        TEST_ASSERT (get_jj == test_numbers[j]);
+      }
 
-    TEST_ASSERT (jerry_get_number_value (ja) == jerry_get_number_value (jerry_get_property_by_index (typedarray, 0)));
-    TEST_ASSERT (jerry_get_number_value (jc) == jerry_get_number_value (jerry_get_property_by_index (typedarray, 2)));
-    TEST_ASSERT (!jerry_delete_property_by_index (typedarray, 1));
-    TEST_ASSERT (jerry_get_number_value (jb) == jerry_get_number_value (jerry_get_property_by_index (typedarray, 1)));
-    TEST_ASSERT (jerry_value_is_undefined (jerry_get_property_by_index (typedarray, test_entries[i].element_count)));
+      jerry_release_value (set_jj);
+      jerry_release_value (get_jj);
+    }
+    /* Testing positive and negative infinity */
+    if (type == JERRY_TYPEDARRAY_FLOAT32 || type == JERRY_TYPEDARRAY_FLOAT64)
+    {
+      for (uint8_t j = 0; j < 2; j++)
+      {
+        jerry_value_t inf = jerry_create_number_infinity (j);
+        jerry_value_t set_inf = jerry_set_property_by_index (typedarray, 0, inf);
+        TEST_ASSERT (set_inf);
+        jerry_value_t get_inf = jerry_get_property_by_index (typedarray, 0);
+        TEST_ASSERT (isinf (jerry_get_number_value (get_inf)));
 
+        jerry_release_value (inf);
+        jerry_release_value (set_inf);
+        jerry_release_value (get_inf);
+      }
+    }
+    jerry_value_t set_jundefined = jerry_set_property_by_index (typedarray, 100, 50);
+    TEST_ASSERT (jerry_value_has_error_flag (set_jundefined));
+    jerry_value_t get_jundefined = jerry_get_property_by_index (typedarray, 100);
+    TEST_ASSERT (jerry_value_is_undefined (get_jundefined));
+
+    for (uint8_t j = 0; j < test_numbers_length; j++)
+    {
+      jerry_release_value (test_numbers[j]);
+    }
+
+    jerry_release_value (set_jundefined);
+    jerry_release_value (get_jundefined);
     jerry_release_value (typedarray);
   }
-  jerry_release_value (global_obj_val);
 } /* test_property_by_index */
 
 int
