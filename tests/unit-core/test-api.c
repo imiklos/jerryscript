@@ -1049,18 +1049,27 @@ main (void)
 
   TEST_ASSERT (test_api_is_free_callback_was_called);
 
-  /* Test: jerry_get_value_without_error_flag */
+  /* Test: jerry_get_value_from_error */
   {
     jerry_init (JERRY_INIT_EMPTY);
     jerry_value_t num_val = jerry_create_number (123);
     jerry_value_set_error_flag (&num_val);
     TEST_ASSERT (jerry_value_is_error (num_val));
-    jerry_value_t num2_val = jerry_get_value_without_error_flag (num_val);
+    jerry_value_t num2_val = jerry_get_value_from_error (num_val, false);
+    TEST_ASSERT (jerry_value_is_error (num_val));
     TEST_ASSERT (!jerry_value_is_error (num2_val));
     double num = jerry_get_number_value (num2_val);
     TEST_ASSERT (num == 123);
-    jerry_release_value (num_val);
+    num2_val = jerry_get_value_from_error (num_val, true);
+    TEST_ASSERT (!jerry_value_is_error (num2_val));
+    num = jerry_get_number_value (num2_val);
+    TEST_ASSERT (num == 123);
     jerry_release_value (num2_val);
+    jerry_value_t not_error_value = jerry_create_number (123);
+    jerry_value_t result_not_error = jerry_get_value_from_error (not_error_value, false);
+    TEST_ASSERT (not_error_value == result_not_error);
+    jerry_release_value (not_error_value);
+    jerry_release_value (result_not_error);
     jerry_cleanup ();
   }
 
@@ -1076,7 +1085,7 @@ main (void)
                                    strlen (parser_err_src_p),
                                    JERRY_PARSE_NO_OPTS);
     TEST_ASSERT (jerry_value_is_error (parsed_code_val));
-    jerry_value_clear_error_flag (&parsed_code_val);
+    parsed_code_val = jerry_get_value_from_error (parsed_code_val, true);
     jerry_value_t err_str_val = jerry_value_to_string (parsed_code_val);
     jerry_size_t err_str_size = jerry_get_string_size (err_str_val);
     jerry_char_t err_str_buf[256];
