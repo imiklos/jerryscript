@@ -917,14 +917,13 @@ jerry_is_feature_enabled (const jerry_feature_t feature) /**< feature to check *
 /**
  * Get the value from an error value.
  *
- * If the input value is an error or abort value and the release is true,
- * release the original input value then return with the extracted api value.
- * Otherwise, just return the extracted api value.
+ * Extract the api value from an error. If the second argument is true
+ * it will release the the input error value.
  *
  * Note:
  *      returned value must be freed with jerry_release_value, when it is no longer needed.
  *
- * @return the real value of the jerry_value
+ * @return jerry_value_t value
  */
 jerry_value_t jerry_get_value_from_error (jerry_value_t value, /**< api value */
                                           bool release) /**< release value */
