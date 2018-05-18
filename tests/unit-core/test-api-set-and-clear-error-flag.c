@@ -24,7 +24,7 @@ main (void)
   jerry_init (JERRY_INIT_EMPTY);
 
   jerry_value_t obj_val = jerry_create_object ();
-  jerry_value_set_error_flag (&obj_val);
+  obj_val = jerry_create_error_from (obj_val, false);
   jerry_value_t err_val = jerry_acquire_value (obj_val);
 
   obj_val = jerry_get_value_from_error (obj_val, true);
