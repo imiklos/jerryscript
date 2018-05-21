@@ -30,7 +30,7 @@ callback_func (const jerry_value_t function_obj,
   JERRY_UNUSED (args_count);
 
   jerry_value_t value = jerry_create_string ((jerry_char_t *) "Abort run!");
-  jerry_value_set_abort_flag (&value);
+  value = jerry_create_abort_from_value (value, false);
   return value;
 } /* callback_func */
 
@@ -114,7 +114,7 @@ main (void)
   TEST_ASSERT (!jerry_value_is_abort (value));
   TEST_ASSERT (!jerry_value_is_error (value));
 
-  jerry_value_set_abort_flag (&value);
+  value = jerry_create_abort_from_value (value, false);
   TEST_ASSERT (jerry_value_is_abort (value));
   TEST_ASSERT (jerry_value_is_error (value));
 
@@ -122,11 +122,11 @@ main (void)
   TEST_ASSERT (!jerry_value_is_abort (error));
   TEST_ASSERT (jerry_value_is_error (error));
 
-  jerry_value_set_abort_flag (&error);
-  TEST_ASSERT (jerry_value_is_abort (error));
-  TEST_ASSERT (jerry_value_is_error (error));
+  jerry_value_t abort = jerry_create_abort_from_value (error, true);
+  TEST_ASSERT (jerry_value_is_abort (abort));
+  TEST_ASSERT (jerry_value_is_error (abort));
 
-  jerry_release_value (error);
+  jerry_release_value (abort);
 
   jerry_cleanup ();
   return 0;

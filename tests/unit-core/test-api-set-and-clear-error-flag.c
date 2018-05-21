@@ -33,6 +33,16 @@ main (void)
   jerry_release_value (err_val);
   jerry_release_value (obj_val);
 
+  jerry_value_t value = jerry_create_number (42);
+  jerry_value_t abort = jerry_create_abort_from_value (value, true);
+  abort = jerry_create_abort_from_value (abort, true);
+  jerry_release_value (abort);
+
+  value = jerry_create_number (42);
+  abort = jerry_create_abort_from_value (value, true);
+  jerry_value_t abort2 = jerry_create_abort_from_value (abort, false);
+  jerry_release_value (abort);
+  jerry_release_value (abort2);
 
   jerry_cleanup ();
 } /* main */
