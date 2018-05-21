@@ -118,15 +118,15 @@ main (void)
   TEST_ASSERT (jerry_value_is_abort (value));
   TEST_ASSERT (jerry_value_is_error (value));
 
-  jerry_value_set_error_flag (&value);
-  TEST_ASSERT (!jerry_value_is_abort (value));
-  TEST_ASSERT (jerry_value_is_error (value));
+  jerry_value_t error = jerry_create_error_from (value, true);
+  TEST_ASSERT (!jerry_value_is_abort (error));
+  TEST_ASSERT (jerry_value_is_error (error));
 
-  jerry_value_set_abort_flag (&value);
-  TEST_ASSERT (jerry_value_is_abort (value));
-  TEST_ASSERT (jerry_value_is_error (value));
+  jerry_value_set_abort_flag (&error);
+  TEST_ASSERT (jerry_value_is_abort (error));
+  TEST_ASSERT (jerry_value_is_error (error));
 
-  jerry_release_value (value);
+  jerry_release_value (error);
 
   jerry_cleanup ();
   return 0;

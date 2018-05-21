@@ -945,26 +945,28 @@ jerry_value_t jerry_get_value_from_error (jerry_value_t value, /**< api value */
 } /* jerry_get_value_from_error */
 
 /**
- * Set the error flag if the value is not an error reference.
+ * Create error from an api value.
+ *
+ * @return api error value
  */
-void
-jerry_value_set_error_flag (jerry_value_t *value_p) /**< api value */
+jerry_value_t jerry_create_error_from (jerry_value_t value, /**< api value */
+                                      bool release) /**< release value */
 {
   jerry_assert_api_available ();
 
-  if (JERRY_UNLIKELY (ecma_is_value_error_reference (*value_p)))
+  if (JERRY_UNLIKELY (ecma_is_value_error_reference (value)))
   {
     /* This is a rare case so it is optimized for
      * binary size rather than performance. */
-    if (!jerry_value_is_abort (*value_p))
+    if (!jerry_value_is_abort (value))
     {
-      return;
+      return value;
     }
-    *value_p = ecma_clear_error_reference (*value_p, false);
   }
 
-  *value_p = ecma_create_error_reference (*value_p, true);
-} /* jerry_value_set_error_flag */
+  jerry_value_t ret_value = jerry_get_value_from_error (value, release);
+  return ecma_create_error_reference (ret_value, true);
+} /* jerry_create_error_from */
 
 /**
  * Set both the abort and error flags if the value is not an error reference.
