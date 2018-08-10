@@ -37,9 +37,9 @@
  */
 jerry_value_t
 jerryx_handler_print (const jerry_value_t func_obj_val, /**< function object */
-                      const jerry_value_t this_p, /**< this arg */
-                      const jerry_value_t args_p[], /**< function arguments */
-                      const jerry_length_t args_cnt) /**< number of function arguments */
+                       const jerry_value_t this_p, /**< this arg */
+                       const jerry_value_t args_p[], /**< function arguments */
+                       const jerry_length_t args_cnt) /**< number of function arguments */
 {
   (void) func_obj_val; /* unused */
   (void) this_p; /* unused */
@@ -49,8 +49,8 @@ jerryx_handler_print (const jerry_value_t func_obj_val, /**< function object */
   jerry_value_t ret_val = jerry_create_undefined ();
 
   for (jerry_length_t arg_index = 0;
-       jerry_value_is_undefined (ret_val) && arg_index < args_cnt;
-       arg_index++)
+      jerry_value_is_undefined (ret_val) && arg_index < args_cnt;
+      arg_index++)
   {
     jerry_value_t str_val = jerry_value_to_string (args_p[arg_index]);
 
@@ -61,22 +61,19 @@ jerryx_handler_print (const jerry_value_t func_obj_val, /**< function object */
         jerryx_port_handler_print_char (' ');
       }
 
-      jerry_size_t substr_size;
-      jerry_length_t substr_pos = 0;
-      jerry_char_t substr_buf[256];
+      jerry_size_t str_size = jerry_get_utf8_string_size (str_val);
+      JERRY_VLA (jerry_char_t, str_buff, str_size);
+      jerry_string_to_utf8_char_buffer (str_val, str_buff, str_size);
 
-      while ((substr_size = jerry_substring_to_utf8_char_buffer (str_val,
-                                                                 substr_pos,
-                                                                 substr_pos + 256,
-                                                                 substr_buf,
-                                                                 256)) != 0)
+      if (str_size != 0)
       {
+
 #ifdef JERRY_DEBUGGER
-        jerry_debugger_send_output (substr_buf, substr_size, JERRY_DEBUGGER_OUTPUT_OK);
+        jerry_debugger_send_output (str_buff, str_size, JERRY_DEBUGGER_OUTPUT_OK);
 #endif /* JERRY_DEBUGGER */
-        for (jerry_size_t chr_index = 0; chr_index < substr_size; chr_index++)
+        for (jerry_size_t chr_index = 0; chr_index < str_size; chr_index++)
         {
-          char chr = (char) substr_buf[chr_index];
+          char chr = (char) str_buff[chr_index];
           if (chr == '\0')
           {
             for (jerry_size_t null_index = 0; null_str[null_index] != 0; null_index++)
@@ -89,10 +86,7 @@ jerryx_handler_print (const jerry_value_t func_obj_val, /**< function object */
             jerryx_port_handler_print_char (chr);
           }
         }
-
-        substr_pos += substr_size;
       }
-
       jerry_release_value (str_val);
     }
     else
