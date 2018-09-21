@@ -26,6 +26,7 @@
 #include "lit-char-helpers.h"
 #include "re-compiler.h"
 
+#define RECURSION_LIMIT 512
 #ifndef CONFIG_DISABLE_REGEXP_BUILTIN
 
 #define ECMA_BUILTINS_INTERNAL
@@ -362,11 +363,12 @@ static ecma_value_t
 re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
                  uint8_t *bc_p, /**< pointer to the current RegExp bytecode */
                  const lit_utf8_byte_t *str_p, /**< input string pointer */
-                 const lit_utf8_byte_t **out_str_p) /**< [out] matching substring iterator */
+                 const lit_utf8_byte_t **out_str_p, /**< [out] matching substring iterator */
+                 int limit) /**< recursion limit*/
 {
   const lit_utf8_byte_t *str_curr_p = str_p;
 
-  while (true)
+  while (limit > 0)
   {
     re_opcode_t op = re_get_opcode (&bc_p);
 
@@ -534,7 +536,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
 
           if (!sub_str_p)
           {
-            match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+            match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
             if (ECMA_IS_VALUE_ERROR (match_value))
             {
               break;
@@ -552,7 +554,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
               || (op == RE_OP_LOOKAHEAD_NEG && !sub_str_p))
           {
             JERRY_TRACE_MSG ("match\n");
-            match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+            match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
           }
           else
           {
@@ -684,7 +686,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
         {
           uint32_t offset = re_get_value (&bc_p);
           const lit_utf8_byte_t *sub_str_p = NULL;
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -769,7 +771,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
         bc_p += offset;
 
         /* Try to match after the close paren if zero is allowed */
-        ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+        ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
         if (ecma_is_value_true (match_value))
         {
@@ -827,7 +829,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
         do
         {
           offset = re_get_value (&bc_p);
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -851,7 +853,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
             || op == RE_OP_NON_CAPTURE_GREEDY_ZERO_GROUP_START)
         {
           JERRY_ASSERT (end_bc_p);
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, end_bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, end_bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -905,7 +907,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
           re_ctx_p->saved_p[end_idx] = str_curr_p;
 
           const lit_utf8_byte_t *sub_str_p = NULL;
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -974,7 +976,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
 
           old_start_p = re_ctx_p->saved_p[start_idx];
           re_ctx_p->saved_p[start_idx] = str_curr_p;
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -998,7 +1000,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
             old_start_p = re_ctx_p->saved_p[start_idx];
             re_ctx_p->saved_p[start_idx] = str_curr_p;
 
-            match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+            match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
             if (ecma_is_value_true (match_value))
             {
@@ -1019,7 +1021,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
             && re_ctx_p->num_of_iterations_p[iter_idx] <= max)
         {
           /* Try to match the rest of the bytecode. */
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, old_bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, old_bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -1054,7 +1056,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
         {
           if (num_of_iter >= min)
           {
-            ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p + offset, str_curr_p, &sub_str_p);
+            ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p + offset, str_curr_p, &sub_str_p, limit-1);
 
             if (ecma_is_value_true (match_value))
             {
@@ -1067,7 +1069,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
             }
           }
 
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (!ecma_is_value_true (match_value))
           {
@@ -1102,7 +1104,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
 
         while (num_of_iter < max)
         {
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p, str_curr_p, &sub_str_p, limit-1);
 
           if (!ecma_is_value_true (match_value))
           {
@@ -1120,7 +1122,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
 
         while (num_of_iter >= min)
         {
-          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p + offset, str_curr_p, &sub_str_p);
+          ecma_value_t match_value = re_match_regexp (re_ctx_p, bc_p + offset, str_curr_p, &sub_str_p, limit-1);
 
           if (ecma_is_value_true (match_value))
           {
@@ -1144,6 +1146,7 @@ re_match_regexp (re_matcher_ctx_t *re_ctx_p, /**< RegExp matcher context */
       }
     }
   }
+  return ECMA_VALUE_FALSE; /* Reached RECURSION_LIMIT */
 } /* re_match_regexp */
 
 /**
@@ -1321,7 +1324,8 @@ ecma_regexp_exec_helper (ecma_value_t regexp_value, /**< RegExp object */
       ECMA_TRY_CATCH (match_value, re_match_regexp (&re_ctx,
                                                     bc_start_p,
                                                     input_curr_p,
-                                                    &sub_str_p),
+                                                    &sub_str_p,
+                                                    RECURSION_LIMIT),
                                                     ret_value);
 
       if (ecma_is_value_true (match_value))
