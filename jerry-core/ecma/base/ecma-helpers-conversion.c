@@ -978,6 +978,19 @@ ecma_number_to_binary_floating_point_number (ecma_number_t num, /**< ecma-number
   return ecma_double_to_binary_floating_point ((double) num, out_digits_p, out_decimal_exp_p);
 } /* ecma_number_to_binary_floating_point_number */
 
+static void __attribute__((optimize("O0")))
+ecma_helper_fill_with_zero(lit_utf8_byte_t *dst_p, /**< [out] destination pointer */
+                            size_t size) /**< size */
+{
+  if (size != 0)
+  {
+    memset(dst_p, LIT_CHAR_0, size);
+  }
+  // for (uint8_t i = 0; i < size; i++) {
+  //   dst_p[i] = LIT_CHAR_0;
+  // }
+}
+
 /**
  * Convert ecma-number to zero-terminated string
  *
@@ -1050,8 +1063,8 @@ ecma_number_to_utf8_string (ecma_number_t num, /**< ecma-number */
   {
     /* 6. */
     dst_p += k;
-
-    memset (dst_p, LIT_CHAR_0, (size_t) (n - k));
+    ecma_helper_fill_with_zero(dst_p, (size_t) (n-k));
+    // memset (dst_p, LIT_CHAR_0, (size_t) (n - k));
     dst_p += n - k;
 
     JERRY_ASSERT (dst_p <= buffer_p + buffer_size);
@@ -1073,7 +1086,8 @@ ecma_number_to_utf8_string (ecma_number_t num, /**< ecma-number */
   {
     /* 8. */
     memmove (dst_p + 2 - n, dst_p, (size_t) k);
-    memset (dst_p + 2, LIT_CHAR_0, (size_t) -n);
+    ecma_helper_fill_with_zero(dst_p + 2, (size_t) -n);
+    // memset (dst_p + 2, LIT_CHAR_0, (size_t) -n);
     *dst_p = LIT_CHAR_0;
     *(dst_p + 1) = LIT_CHAR_DOT;
     dst_p += k - n + 2;
