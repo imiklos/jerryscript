@@ -244,12 +244,19 @@ re_insert_into_group_with_jump (re_compiler_ctx_t *re_ctx_p, /**< RegExp compile
  */
 static ecma_value_t
 re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context */
-                      bool expect_eof) /**< expect end of file */
+                      bool expect_eof /**< expect end of file */
+                      REGEXP_RECURSION_LIMIT_ARG) /**< RegExp recursion depth limit */
 {
   uint32_t idx;
   re_bytecode_ctx_t *bc_ctx_p = re_ctx_p->bytecode_ctx_p;
   ecma_value_t ret_value = ECMA_VALUE_EMPTY;
-
+#ifdef REGEXP_RECURSION_LIMIT
+  if (recursion_limit < 1)
+  {
+    ret_value = ecma_raise_range_error ("RegExp executor recursion limit is exceeded.");
+    return ret_value;
+  }
+#endif /* REGEXP_RECURSION_LIMIT */
   uint32_t alterantive_offset = re_get_bytecode_length (re_ctx_p->bytecode_ctx_p);
   bool should_loop = true;
 
@@ -273,7 +280,7 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
         idx = re_ctx_p->num_of_captures++;
         JERRY_TRACE_MSG ("Compile a capture group start (idx: %u)\n", (unsigned int) idx);
 
-        ret_value = re_parse_alternative (re_ctx_p, false);
+        ret_value = re_parse_alternative (re_ctx_p, false REGEXP_RECURSION_LIMIT_CALL_ARG);
 
         if (ecma_is_value_empty (ret_value))
         {
@@ -287,7 +294,7 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
         idx = re_ctx_p->num_of_non_captures++;
         JERRY_TRACE_MSG ("Compile a non-capture group start (idx: %u)\n", (unsigned int) idx);
 
-        ret_value = re_parse_alternative (re_ctx_p, false);
+        ret_value = re_parse_alternative (re_ctx_p, false REGEXP_RECURSION_LIMIT_CALL_ARG);
 
         if (ecma_is_value_empty (ret_value))
         {
@@ -355,7 +362,7 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
         idx = re_ctx_p->num_of_non_captures++;
         re_append_opcode (bc_ctx_p, RE_OP_LOOKAHEAD_POS);
 
-        ret_value = re_parse_alternative (re_ctx_p, false);
+        ret_value = re_parse_alternative (re_ctx_p, false REGEXP_RECURSION_LIMIT_CALL_ARG);
 
         if (ecma_is_value_empty (ret_value))
         {
@@ -372,7 +379,7 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
         idx = re_ctx_p->num_of_non_captures++;
         re_append_opcode (bc_ctx_p, RE_OP_LOOKAHEAD_NEG);
 
-        ret_value = re_parse_alternative (re_ctx_p, false);
+        ret_value = re_parse_alternative (re_ctx_p, false REGEXP_RECURSION_LIMIT_CALL_ARG);
 
         if (ecma_is_value_empty (ret_value))
         {
@@ -580,7 +587,7 @@ re_compile_bytecode (const re_compiled_code_t **out_bytecode_p, /**< [out] point
   re_ctx.num_of_captures = 1;
   re_append_opcode (&bc_ctx, RE_OP_SAVE_AT_START);
 
-  ecma_value_t parse_alt_result = re_parse_alternative (&re_ctx, true);
+  ecma_value_t parse_alt_result = re_parse_alternative (&re_ctx, true REGEXP_RECURSION_LIMIT_INIT_CALL_ARG);
 
   ECMA_FINALIZE_UTF8_STRING (pattern_start_p, pattern_start_size);
 

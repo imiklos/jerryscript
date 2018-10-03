@@ -63,6 +63,19 @@ ecma_value_t re_parse_regexp_flags (ecma_string_t *flags_str_p, uint16_t *flags_
 void re_initialize_props (ecma_object_t *re_obj_p, ecma_string_t *source_p, uint16_t flags);
 
 /**
+ * RegExp recursion depth limit
+ */
+#ifdef REGEXP_RECURSION_LIMIT
+#define REGEXP_RECURSION_LIMIT_ARG , uint32_t recursion_limit
+#define REGEXP_RECURSION_LIMIT_CALL_ARG , recursion_limit-1
+#define REGEXP_RECURSION_LIMIT_INIT_CALL_ARG , REGEXP_RECURSION_LIMIT
+#else
+#define REGEXP_RECURSION_LIMIT_ARG
+#define REGEXP_RECURSION_LIMIT_CALL_ARG
+#define REGEXP_RECURSION_LIMIT_INIT_CALL_ARG
+#endif /* REGEXP_RECURSION_LIMIT */
+
+/**
  * @}
  * @}
  */
