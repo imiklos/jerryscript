@@ -46,6 +46,9 @@ typedef struct
   const lit_utf8_byte_t **saved_p;      /**< saved result string pointers, ECMA 262 v5, 15.10.2.1, State */
   const lit_utf8_byte_t *input_start_p; /**< start of input pattern string */
   const lit_utf8_byte_t *input_end_p;   /**< end of input pattern string */
+#ifdef REGEXP_RECURSION_LIMIT
+  uint32_t recursion_depth;             /**< recursion depth counter */
+#endif /* REGEXP_RECURSION_LIMIT */
   uint32_t num_of_captures;             /**< number of capture groups */
   uint32_t num_of_non_captures;         /**< number of non-capture groups */
   uint32_t *num_of_iterations_p;        /**< number of iterations */

@@ -249,7 +249,14 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
   uint32_t idx;
   re_bytecode_ctx_t *bc_ctx_p = re_ctx_p->bytecode_ctx_p;
   ecma_value_t ret_value = ECMA_VALUE_EMPTY;
-
+#ifdef REGEXP_RECURSION_LIMIT
+  if (re_ctx_p->recursion_depth > REGEXP_RECURSION_LIMIT)
+  {
+    ret_value = ecma_raise_range_error ("RegExp executor recursion limit is exceeded.");
+    return ret_value;
+  }
+  ++re_ctx_p->recursion_depth;
+#endif /* REGEXP_RECURSION_LIMIT */
   uint32_t alterantive_offset = re_get_bytecode_length (re_ctx_p->bytecode_ctx_p);
   bool should_loop = true;
 
@@ -440,6 +447,9 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
         else
         {
           re_insert_u32 (bc_ctx_p, alterantive_offset, re_get_bytecode_length (bc_ctx_p) - alterantive_offset);
+#ifdef REGEXP_RECURSION_LIMIT
+          --re_ctx_p->recursion_depth;
+#endif /* REGEXP_RECURSION_LIMIT */
           should_loop = false;
         }
         break;
@@ -453,6 +463,9 @@ re_parse_alternative (re_compiler_ctx_t *re_ctx_p, /**< RegExp compiler context 
         else
         {
           re_insert_u32 (bc_ctx_p, alterantive_offset, re_get_bytecode_length (bc_ctx_p) - alterantive_offset);
+#ifdef REGEXP_RECURSION_LIMIT
+          --re_ctx_p->recursion_depth;
+#endif /* REGEXP_RECURSION_LIMIT */
           should_loop = false;
         }
 
@@ -559,6 +572,9 @@ re_compile_bytecode (const re_compiled_code_t **out_bytecode_p, /**< [out] point
   re_ctx.flags = flags;
   re_ctx.highest_backref = 0;
   re_ctx.num_of_non_captures = 0;
+#ifdef REGEXP_RECURSION_LIMIT
+  re_ctx.recursion_depth = 0;
+#endif /* REGEXP_RECURSION_LIMIT */
 
   re_bytecode_ctx_t bc_ctx;
   bc_ctx.block_start_p = NULL;
