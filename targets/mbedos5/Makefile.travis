@@ -23,6 +23,9 @@ all:
 
 # Deploy Mbed and install Mbed Python dependencies.
 install:
+	python --version
+	pip --version
+	pip install --user intervaltree<3.0.0.0
 	pip install --user mbed-cli
 	cd targets/mbedos5 && mbed deploy
 	pip install --user mbed-host-tests==1.4.2 # FIXME: mbed-host-tests 1.4.4 requires pyocd>=0.14.0, which cannot be satisfied for whatever reason
